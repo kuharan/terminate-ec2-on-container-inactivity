@@ -1,0 +1,27 @@
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          
+          # Install AWS Systems Manager Agent (SSM)
+          sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
+          
+          # Create a script to check Docker container and stop EC2 instance if necessary
+          echo '#!/bin/bash' | sudo tee /usr/local/bin/check_container.sh > /dev/null
+          echo 'threshold=7200' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'container_id=$(docker ps -q --filter "status=running")' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'start_time=$(docker inspect --format='"'"'{{.State.StartedAt}}'"'"' "$container_id")' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'start_timestamp=$(date -d "$start_time" +%s)' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'current_timestamp=$(date +%s)' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'time_diff=$((current_timestamp - start_timestamp))' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'if [[ $time_diff -gt $threshold ]]; then' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo '  shutdown -h now' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'fi' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          sudo chmod +x /usr/local/bin/check_container.sh
+          
+          # Schedule the script to run every 5 minutes using cron
+          echo '*/5 * * * * root /usr/local/bin/check_container.sh' | sudo tee /etc/cron.d/check_container_cron > /dev/null
+          sudo service cron restart
