@@ -6,9 +6,6 @@ Resources:
         Fn::Base64: !Sub |
           #!/bin/bash
 
-          # Install AWS Systems Manager Agent (SSM)
-          sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm
-
           # Create a script to check Docker container and stop EC2 instance if necessary
           echo '#!/bin/bash' | sudo tee /usr/local/bin/check_container.sh > /dev/null
           echo 'threshold=7200' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null

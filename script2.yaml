@@ -1,0 +1,23 @@
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+
+          # Create a script to check Docker container and stop the OS if necessary
+          echo '#!/bin/bash' | sudo tee /usr/local/bin/check_container.sh > /dev/null
+          echo 'threshold=7200' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'last_end_time=$(docker ps -a --format='{{.ID}} {{.Status}}' | grep 'Exited' | awk '{print $1}' | xargs -I {} docker inspect -f '{{.State.FinishedAt}}' {})' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'last_end_timestamp=$(date -d "$last_end_time" +%s)' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'current_timestamp=$(date +%s)' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'time_diff=$((current_timestamp - last_end_timestamp))' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'if [ $time_diff -gt $threshold ]; then' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo '  shutdown -P now' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'fi' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          sudo chmod +x /usr/local/bin/check_container.sh
+
+          # Schedule the script to run every 5 minutes using cron
+          echo '*/5 * * * * root /usr/local/bin/check_container.sh >/dev/null 2>&1' | sudo tee /etc/cron.d/check_container_cron > /dev/null
+          sudo systemctl restart cron
