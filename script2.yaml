@@ -9,7 +9,7 @@ Resources:
           # Create a script to check Docker container and stop the OS if necessary
           echo '#!/bin/bash' | sudo tee /usr/local/bin/check_container.sh > /dev/null
           echo 'threshold=7200' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
-          echo 'last_end_time=$(docker ps -a --format='{{.ID}} {{.Status}}' | grep 'Exited' | awk '{print $1}' | xargs -I {} docker inspect -f '{{.State.FinishedAt}}' {})' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
+          echo 'last_end_time=$(docker ps -a --format="{{.ID}} {{.Status}}" | grep 'Exited' | awk "{print $1}" | cut -d " " 1 |xargs -I {} docker inspect -f "{{.State.FinishedAt}}" {})' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
           echo 'last_end_timestamp=$(date -d "$last_end_time" +%s)' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
           echo 'current_timestamp=$(date +%s)' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
           echo 'time_diff=$((current_timestamp - last_end_timestamp))' | sudo tee -a /usr/local/bin/check_container.sh > /dev/null
